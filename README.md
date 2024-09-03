@@ -91,7 +91,7 @@ Client management tool for GRIM's LAB.
 ## Contact
 
 - Twitter: [@fuckgrimlabs](https://twitter.com/fuckgrimlabs)
-- Discord: [@usbank](https://discord.com/users/usbank)
+- Discord: [@usbank](https://discord.com/users/913656519847981067)
 
 ## Contributing
 

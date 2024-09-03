@@ -76,6 +76,46 @@ Client management tool for GRIM's LAB.
 
 4. Configure NextAuth in `pages/api/auth/[...nextauth].ts`
 
+## API Endpoints
+
+### Tickets
+
+#### GET /api/tickets
+- Description: Fetches all tickets
+- Query Parameters:
+  - userFilter (optional): Filter tickets by user ID
+  - statusFilter (optional): Filter tickets by status (OPEN or CLOSED)
+  - titleFilter (optional): Filter tickets by title (case-insensitive)
+- Response: JSON object containing an array of tickets
+
+#### POST /api/tickets
+- Description: Creates a new ticket
+- Request Body:
+  - title: String
+  - status: String (OPEN or CLOSED)
+  - userId: String
+- Response: JSON object containing the created ticket
+
+#### DELETE /api/tickets
+- Description: Deletes a ticket
+- Query Parameters:
+  - ticketId: ID of the ticket to delete
+- Response: JSON object with a success message
+
+### Users
+
+#### GET /api/users
+- Description: Fetches all users
+- Response: JSON object containing an array of users with id, name, and email
+
+### Auth
+
+#### GET /api/auth/[...nextauth]
+- Description: Handles authentication routes for NextAuth.js
+- Providers: Discord
+
+Note: All endpoints require authentication except for the auth routes.
+
 ## Deployment
 
 1. Push code to GitHub

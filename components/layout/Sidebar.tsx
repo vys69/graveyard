@@ -41,7 +41,6 @@ export function Sidebar() {
   const sidebarItems = [
     { href: "/dashboard", icon: Home, label: "Dashboard" },
     { href: "/tasks", icon: Briefcase, label: "Tasks" },
-    { href: "/support", icon: LifeBuoy, label: "Support" },
     { href: "/tickets", icon: Ticket, label: "Tickets" }
   ];
 

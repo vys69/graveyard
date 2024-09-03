@@ -1,26 +1,13 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
-//generator client {
-//  provider = "prisma-client-js"
-//}
-
-//datasource db {
-//  provider = "postgresql"
-//  url      = env("DATABASE_URL")
-//}
+generator client {
+  provider = "prisma-client-js"
+}
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-}
-
-generator client {
-  provider = "prisma-client-js"
-  previewFeatures = ["tracing"]
 }
 
 model User {
@@ -40,12 +27,12 @@ model Account {
   type               String
   provider           String
   providerAccountId  String
-  refresh_token      String?
-  access_token       String?
+  refresh_token      String?  @db.Text
+  access_token       String?  @db.Text
   expires_at         Int?
   token_type         String?
   scope              String?
-  id_token           String?
+  id_token           String?  @db.Text
   session_state      String?
   user               User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -71,10 +58,23 @@ model VerificationToken {
 model Ticket {
   id          String   @id @default(cuid())
   title       String
-  description String?
-  status      String   // Change this to an enum if you want strict status types
-  userId      String
+  description String
+  status      String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  userId      String
+  categoryId  String?  // Make this field optional by adding the ? 
   user        User     @relation(fields: [userId], references: [id])
+  messages    Message[]
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  ticketId  String
+  content   String
+  userId    String
+  userName  String
+  userAvatar String?
+  timestamp DateTime
+  ticket    Ticket   @relation(fields: [ticketId], references: [id])
 }

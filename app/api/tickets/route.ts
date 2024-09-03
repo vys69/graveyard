@@ -5,94 +5,74 @@ import { authOptions } from '../auth/[...nextauth]/route';
 
 const prisma = new PrismaClient();
 
-export async function GET(req: Request) {
+export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
   
   if (!session || !session.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const userId = session.user.id;
-  console.log('GET request received for userId:', userId);
-
   try {
     const tickets = await prisma.ticket.findMany({
-      where: { userId: userId },
       include: {
         user: {
           select: {
             name: true,
-            image: true
-          }
-        }
-      }
+            image: true,
+          },
+        },
+      },
     });
 
-    const ticketsWithUserInfo = tickets.map(ticket => ({
+    const formattedTickets = tickets.map(ticket => ({
       id: ticket.id,
       title: ticket.title,
+      description: ticket.description,
       status: ticket.status,
-      userName: ticket.user.name,
-      userImage: ticket.user.image
+      userName: ticket.user?.name || null,
+      userImage: ticket.user?.image || null,
     }));
 
-    console.log('Fetched tickets:', ticketsWithUserInfo);
-    return NextResponse.json({ tickets: ticketsWithUserInfo });
+    return NextResponse.json({ tickets: formattedTickets });
   } catch (error) {
     console.error('Error fetching tickets:', error);
     return NextResponse.json({ error: 'Failed to fetch tickets' }, { status: 500 });
   }
 }
 
-export async function POST(req: Request) {
+export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
-  
-  if (!session || !session.user) {
+  if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  try {
-    const body = await req.json();
-    console.log('Received POST request with body:', body);
+  const { title, description } = await request.json();
 
+  try {
     const ticket = await prisma.ticket.create({
       data: {
-        title: body.title,
-        description: body.description,
-        userId: session.user.id,
+        title,
+        description,
         status: 'OPEN',
+        userId: session.user.id, // Make sure this is set correctly
       },
-      include: {
-        user: {
-          select: {
-            name: true
-          }
-        }
-      }
     });
 
-    const ticketWithUserName = {
-      id: ticket.id,
-      title: ticket.title,
-      status: ticket.status,
-      userName: ticket.user.name
-    };
-
-    return NextResponse.json({ message: 'Ticket created successfully', ticket: ticketWithUserName });
+    return NextResponse.json(ticket);
   } catch (error) {
     console.error('Error creating ticket:', error);
     return NextResponse.json({ error: 'Failed to create ticket' }, { status: 500 });
   }
 }
 
-export async function DELETE(req: Request) {
+export async function DELETE(request: Request) {
   const session = await getServerSession(authOptions);
   
   if (!session || !session.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { searchParams } = new URL(req.url);
+  const { searchParams } = new URL(request.url);
   const ticketId = searchParams.get('ticketId');
 
   if (!ticketId) {
@@ -108,7 +88,10 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
     }
 
+    // Check if the user is authorized to delete this ticket
     if (ticket.userId !== session.user.id) {
+      console.log('Session user ID:', session.user.id);
+      console.log('Ticket user ID:', ticket.userId);
       return NextResponse.json({ error: 'Unauthorized to delete this ticket' }, { status: 403 });
     }
 
@@ -121,4 +104,12 @@ export async function DELETE(req: Request) {
     console.error('Error deleting ticket:', error);
     return NextResponse.json({ error: 'Failed to delete ticket' }, { status: 500 });
   }
+}
+
+export async function OPTIONS(request: Request) {
+  const response = new NextResponse(null, { status: 200 });
+  response.headers.set('Access-Control-Allow-Origin', '*');
+  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  return response;
 }

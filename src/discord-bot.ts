@@ -1,11 +1,14 @@
-import { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, ChannelType, TextChannel, Message, NewsChannel, ThreadChannel, VoiceChannel, StageChannel } from 'discord.js';
+import { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, ChannelType, Message } from 'discord.js';
 import dotenv from 'dotenv';
 import fetch from 'node-fetch';
 
 dotenv.config();
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_BOT_TOKEN!);
+
+// Hard-coded category ID
+const TICKET_CATEGORY_ID = '1241518374765203537'; // Replace with your actual category ID
 
 const createTicketCommand = new SlashCommandBuilder()
   .setName('create-ticket')
@@ -17,10 +20,6 @@ const createTicketCommand = new SlashCommandBuilder()
   .addStringOption(option =>
     option.setName('description')
       .setDescription('The description of the ticket')
-      .setRequired(true))
-  .addStringOption(option =>
-    option.setName('category')
-      .setDescription('The ID of the category to create the ticket channel in')
       .setRequired(true));
 
 async function main() {
@@ -45,7 +44,6 @@ async function main() {
     if (interaction.commandName === 'create-ticket') {
       const title = interaction.options.getString('title')!;
       const description = interaction.options.getString('description')!;
-      const categoryId = interaction.options.getString('category')!;
       const userId = interaction.user.id;
       const userName = interaction.user.username;
       const userAvatar = interaction.user.avatarURL();
@@ -66,14 +64,22 @@ async function main() {
             userId,
             userName,
             userAvatar,
-            categoryId,
+            categoryId: TICKET_CATEGORY_ID,
           }),
         });
 
         if (!response.ok) {
           const errorText = await response.text();
           console.error('Failed to create ticket:', response.status, errorText);
-          console.error('Response headers:', response.headers);
+          console.error('Request body:', {
+            title,
+            description,
+            userId,
+            userName,
+            userAvatar,
+            categoryId: TICKET_CATEGORY_ID,
+          });
+          console.error('API Token:', process.env.API_TOKEN); // Be careful with logging sensitive information
           await interaction.reply('Failed to create ticket. Please try again later.');
           return;
         }
@@ -82,9 +88,9 @@ async function main() {
 
         // Create a new channel for the ticket
         if (interaction.guild) {
-          const category = await interaction.guild.channels.fetch(categoryId);
+          const category = await interaction.guild.channels.fetch(TICKET_CATEGORY_ID);
           if (!category || category.type !== ChannelType.GuildCategory) {
-            await interaction.reply('Invalid category ID. Please provide a valid category ID.');
+            await interaction.reply('Invalid category ID. Please contact an administrator.');
             return;
           }
 
@@ -95,7 +101,14 @@ async function main() {
             parent: category.id,
           });
 
-          // ... (rest of the channel creation code)
+          // Set permissions for the channel
+          await channel.permissionOverwrites.create(interaction.user, {
+            ViewChannel: true,
+            SendMessages: true,
+            ReadMessageHistory: true,
+          });
+
+          await channel.send(`Ticket created by ${interaction.user}. Title: ${title}\nDescription: ${description}`);
         }
 
         await interaction.reply(`Ticket created successfully! Ticket ID: ${ticket.id}`);
@@ -113,7 +126,7 @@ async function main() {
     // Function to safely get channel name
     const getChannelName = (channel: Message['channel']): string => {
       if (channel.isTextBased() && 'name' in channel) {
-        return channel.name;
+        return channel.name ?? 'Unknown Channel';
       }
       return 'Unknown Channel';
     };

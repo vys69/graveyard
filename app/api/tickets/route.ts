@@ -41,27 +41,55 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const { title, description } = await request.json();
-
   try {
+    const authHeader = request.headers.get('Authorization');
+    if (authHeader !== `Bearer ${process.env.API_TOKEN}`) {
+      console.log('Unauthorized: Invalid token');
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    console.log('Received body:', body);
+
+    const { title, description, userId, userName, userAvatar, categoryId } = body;
+
+    if (typeof title !== 'string' || typeof description !== 'string' || typeof userId !== 'string' || typeof userName !== 'string') {
+      console.log('Invalid input:', { title, description, userId, userName });
+      return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
+    }
+
+    // Check if user exists, if not create a new user
+    let user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          id: userId,
+          name: userName,
+        },
+      });
+    }
+
     const ticket = await prisma.ticket.create({
       data: {
         title,
         description,
         status: 'OPEN',
-        userId: session.user.id, // Make sure this is set correctly
+        userId,
+        userName,
+        userAvatar,
+        categoryId,
       },
     });
 
+    console.log('Ticket created:', ticket);
     return NextResponse.json(ticket);
   } catch (error) {
     console.error('Error creating ticket:', error);
-    return NextResponse.json({ error: 'Failed to create ticket' }, { status: 500 });
+    if (error instanceof Error) {
+      return NextResponse.json({ error: 'Failed to create ticket', details: error.message }, { status: 500 });
+    } else {
+      return NextResponse.json({ error: 'Failed to create ticket', details: 'An unknown error occurred' }, { status: 500 });
+    }
   }
 }
 

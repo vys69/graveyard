@@ -63,7 +63,9 @@ model Ticket {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   userId      String
-  categoryId  String?  // Make this field optional by adding the ? 
+  userName    String?  // Add this line
+  userAvatar  String?  // Add this line
+  categoryId  String?
   user        User     @relation(fields: [userId], references: [id])
   messages    Message[]
 }
